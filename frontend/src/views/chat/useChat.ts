@@ -39,7 +39,7 @@ export const useChat = (
     '基于现有材料生成培训 PPT 大纲',
     '把企业年金知识点整理成新人必学清单'
   ]));
-  const commonAgents = computed(() => agents.filter((agent) => ['it-qa', 'consumer-protection'].includes(agent.id)));
+  const commonAgents = computed(() => agents.filter((agent) => ['it-qa', 'consumer-protection', 'material-maker'].includes(agent.id)));
   const annuityAgents = computed(() => agents.filter((agent) => agent.id === 'annuity-business'));
 
   watch(
@@ -94,6 +94,8 @@ export const useChat = (
       content: '',
       reasoning: '',
       todoCard: null,
+      a2uiCards: [],
+      materialCards: [],
       isStreaming: true,
       agentTitle: agent.title
     };
@@ -113,10 +115,10 @@ export const useChat = (
           session_id: agentSessionId.value || undefined,
           stream: true,
           protocol: 'agui',
-          user_id: 'egis-agents-frontend-user',
+          user_id: 'egis-agent-frontend-user',
           context: {
             selected_frontend_agent: agent.id,
-            frontend: 'egis-agents-frontend',
+            frontend: 'egis-agent-frontend',
             retrieval_scope: {
               internet_search: scopeRefs.internetSearchEnabled.value,
               library_ids: scopeRefs.selectedScopeIds.value,

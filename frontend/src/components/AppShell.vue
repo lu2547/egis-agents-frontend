@@ -38,7 +38,7 @@ const navItems = [
         :class="{ active: route.path === item.to }"
       >
         <component :is="item.icon" />
-        <span>{{ item.label }}</span>
+        <span :class="{ 'long-label': item.label.length > 4 }">{{ item.label }}</span>
       </RouterLink>
     </aside>
 

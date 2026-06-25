@@ -17,12 +17,37 @@ export type TodoStep = {
   status: 'completed' | 'in_progress' | 'pending' | 'blocked';
 };
 
+export type OutlineItem = {
+  page: string;
+  type: string;
+  title: string;
+  subtitle?: string;
+  bullets?: string[];
+  visual?: string;
+};
+
+export type SelectionOption = {
+  id: string;
+  title: string;
+  description: string;
+  icon: string;
+  features: string[];
+};
+
+export type MaterialCard = {
+  kind: 'selection' | 'redirect' | 'outline' | 'ppt_preview' | 'word_preview' | 'docgen_word_editor' | 'download';
+  toolName: string;
+  data: any;
+};
+
 export type ChatMessage = {
   id: number;
   role: 'user' | 'assistant';
   content: string;
   reasoning?: string;
   todoCard?: any;
+  a2uiCards?: any[];
+  materialCards?: MaterialCard[];
   isStreaming?: boolean;
   elapsed?: number;
   agentTitle?: string;

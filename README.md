@@ -1,4 +1,4 @@
-# egis-agents-frontend
+# egis-agent-frontend
 
 养老险GPT 前端项目，面向企业养老险业务场景，提供学习、知识检索、智能对话与 Agent Playground 的统一工作台。项目采用 Vue 3 + TDesign 风格构建，后端对接 [egis-agents](../egis-agents) 的 AGUI/SSE 对话协议与智能体能力。
 
@@ -7,7 +7,7 @@
 ## 架构概览
 
 ```
-egis-agents-frontend/
+egis-agent-frontend/
 ├── frontend/                         # Vue 3 + Vite 前端应用
 │   ├── src/
 │   │   ├── components/
@@ -98,10 +98,10 @@ egis-agents-frontend/
   "session_id": "可选会话 ID",
   "stream": true,
   "protocol": "agui",
-  "user_id": "egis-agents-frontend-user",
+  "user_id": "egis-agent-frontend-user",
   "context": {
     "selected_frontend_agent": "it-qa",
-    "frontend": "egis-agents-frontend",
+    "frontend": "egis-agent-frontend",
     "retrieval_scope": {
       "internet_search": true,
       "library_ids": [],

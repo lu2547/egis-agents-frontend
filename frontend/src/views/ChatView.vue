@@ -18,6 +18,12 @@ import { useChat } from './chat/useChat';
 import { useScopeSelection } from './chat/scope';
 import { renderMarkdown } from './chat/markdown';
 import { activeStepId, completedCount, displayTodoSteps, todoSteps, todoSummary, todoTitle } from './chat/todo';
+import A2UICard from '../components/A2UICard.vue';
+import OutlineCard from '../components/OutlineCard.vue';
+import PptPreviewCard from '../components/PptPreviewCard.vue';
+import WordPreviewCard from '../components/WordPreviewCard.vue';
+import DocgenWordEditorCard from '../components/DocgenWordEditorCard.vue';
+import DownloadCard from '../components/DownloadCard.vue';
 
 const showScopePanel = ref(false);
 const showPreciseScope = ref(false);
@@ -75,6 +81,19 @@ const openPreciseScope = () => {
 
 const applyPreciseScope = () => {
   showPreciseScope.value = false;
+};
+
+/* ── 材料卡片交互回调 ─────────────────── */
+const onA2UIAction = (actionType: string, actionArgs: string) => {
+  if (actionType === 'sendMessage' && actionArgs) {
+    inputValue.value = actionArgs;
+    sendMessage();
+  }
+};
+
+const onOutlineConfirm = (updatedOutline: any) => {
+  inputValue.value = `确认大纲，共 ${updatedOutline.length} 项`;
+  sendMessage();
 };
 </script>
 
@@ -274,6 +293,57 @@ const applyPreciseScope = () => {
                     已完成 {{ completedCount(message) }}/{{ todoSteps(message).length }} 步，{{ todoSummary(message) }}
                   </footer>
                 </section>
+
+                <!-- ── A2UI 卡片组（select_method / std_redirect 等） ── -->
+                <template v-if="message.a2uiCards?.length">
+                  <A2UICard
+                    v-for="(a2ui, aIdx) in message.a2uiCards"
+                    :key="'a2ui-' + aIdx"
+                    :payload="a2ui"
+                    @action="onA2UIAction"
+                  />
+                </template>
+
+                <!-- ── 材料制作卡片组（outline / preview / download） ── -->
+                <template v-if="message.materialCards?.length">
+                  <template v-for="(card, cIdx) in message.materialCards" :key="cIdx">
+                    <!-- 大纲编辑卡片 -->
+                    <OutlineCard
+                      v-if="card.kind === 'outline'"
+                      :outline="card.data.outline || []"
+                      :document-type="card.data.document_type || 'ppt'"
+                      @confirm="onOutlineConfirm"
+                    />
+                    <!-- PPT 预览 -->
+                    <PptPreviewCard
+                      v-else-if="card.kind === 'ppt_preview'"
+                      :slides="card.data.slides || []"
+                      :title="card.data.view?.title"
+                    />
+                    <!-- Word 预览 -->
+                    <WordPreviewCard
+                      v-else-if="card.kind === 'word_preview'"
+                      :sections="card.data.sections || []"
+                      :title="card.data.view?.title"
+                      :total-words="card.data.total_words"
+                    />
+                    <!-- DocGen Word 编辑器（eigenpal/docx-editor） -->
+                    <DocgenWordEditorCard
+                      v-else-if="card.kind === 'docgen_word_editor'"
+                      :docx-url="card.data.docx_url || ''"
+                      :title="card.data.title || card.data.view?.title"
+                    />
+                    <!-- 下载卡片 -->
+                    <DownloadCard
+                      v-else-if="card.kind === 'download'"
+                      :file-name="card.data.file_name || '文件'"
+                      :file-size="card.data.file_size"
+                      :download-url="card.data.download_url || '#'"
+                      :file-type="card.data.file_type"
+                    />
+                  </template>
+                </template>
+
                 <div v-if="message.content" class="assistant-answer" v-html="renderMarkdown(message.content)"></div>
               </div>
             </article>
@@ -1207,7 +1277,7 @@ const applyPreciseScope = () => {
 .assistant-stack {
   width: 100%;
   display: grid;
-  gap: 0;
+  gap: 10px;
 }
 
 .process-card {

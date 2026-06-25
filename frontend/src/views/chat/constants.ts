@@ -2,7 +2,8 @@ import {
   ChatBubbleHelpIcon,
   EducationIcon,
   FileWordIcon,
-  UserSafetyIcon
+  UserSafetyIcon,
+  PlayCircleIcon
 } from 'tdesign-icons-vue-next';
 import type { AgentOption, ScopeGroup } from './types';
 
@@ -46,6 +47,16 @@ export const agents: AgentOption[] = [
     icon: UserSafetyIcon,
     tone: 'safe',
     examples: ['检查这段话术的适当性风险', '生成消保风险提示清单']
+  },
+  {
+    id: 'material-maker',
+    backendAgentId: 'material_maker',
+    title: '材料制作助手',
+    desc: '标化模板/AI制作，PPT+Word一键生成',
+    badge: 'New',
+    icon: PlayCircleIcon,
+    tone: 'material',
+    examples: ['帮我制作一份年金产品分析PPT', '生成企业年金三年发展报告Word文档']
   }
 ];
 
