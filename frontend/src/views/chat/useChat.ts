@@ -1,4 +1,4 @@
-import { computed, nextTick, ref, watch } from 'vue';
+import { computed, nextTick, reactive, ref, watch } from 'vue';
 import type { Ref } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
 import { agents, agentMap } from './constants';
@@ -88,7 +88,8 @@ export const useChat = (
       agentTitle: agent.title,
       createdAt: todayLabel
     });
-    const assistant: ChatMessage = {
+    // reactive 包装：流式事件直接改 assistant 也能触发渲染（raw 对象会绕过依赖收集）。
+    const assistant: ChatMessage = reactive({
       id: messageSeed++,
       role: 'assistant',
       content: '',
@@ -98,7 +99,7 @@ export const useChat = (
       materialCards: [],
       isStreaming: true,
       agentTitle: agent.title
-    };
+    });
     messages.value.push(assistant);
     isLoading.value = true;
     await scrollToBottom();

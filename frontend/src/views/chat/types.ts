@@ -40,6 +40,18 @@ export type MaterialCard = {
   data: any;
 };
 
+/** Research Loop 过程摘要卡（frontend_digest display_type=research_trace）。 */
+export type ResearchTrace = {
+  id: number;
+  toolName: string;
+  /** 研究轮次（collect 批次号），前端按此分组展示「第 N 轮」。 */
+  turn: number;
+  /** 阶段：plan / collect / evaluate / finalize。 */
+  phase: string;
+  title: string;
+  content: string;
+};
+
 export type ChatMessage = {
   id: number;
   role: 'user' | 'assistant';
@@ -48,10 +60,34 @@ export type ChatMessage = {
   todoCard?: any;
   a2uiCards?: any[];
   materialCards?: MaterialCard[];
+  researchTraces?: ResearchTrace[];
   isStreaming?: boolean;
   elapsed?: number;
   agentTitle?: string;
   createdAt?: string;
+};
+
+/** SSE 事件分类（用于运行日志的结构化展示与着色）。 */
+export type SseLogCategory =
+  | 'lifecycle'
+  | 'tool'
+  | 'text'
+  | 'step'
+  | 'digest'
+  | 'snapshot'
+  | 'error'
+  | 'other';
+
+/** 一条 SSE 事件的结构化日志条目。 */
+export type SseLogEntry = {
+  id: number;
+  seq: number;
+  type: string;
+  category: SseLogCategory;
+  ts: string;
+  summary: string;
+  detail?: string;
+  raw: any;
 };
 
 export type ScopeGroup = {

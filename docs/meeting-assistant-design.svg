@@ -1,0 +1,145 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1240 900" font-family="'PingFang SC','Hiragino Sans GB','Microsoft YaHei',sans-serif">
+  <defs>
+    <marker id="arrow" markerWidth="10" markerHeight="10" refX="8" refY="3" orient="auto">
+      <path d="M0,0 L9,3 L0,6 Z" fill="#9aa4b2"/>
+    </marker>
+    <filter id="soft" x="-10%" y="-10%" width="120%" height="130%">
+      <feDropShadow dx="0" dy="2" stdDeviation="3" flood-color="#1e2a44" flood-opacity="0.10"/>
+    </filter>
+  </defs>
+
+  <rect width="1240" height="900" fill="#ffffff"/>
+
+  <!-- Title -->
+  <text x="620" y="52" text-anchor="middle" font-size="30" font-weight="700" fill="#1f3a63">MeetingAssistant 智能会议管理 · 技术设计图</text>
+  <text x="620" y="84" text-anchor="middle" font-size="15" fill="#7b8495">Vue3 嵌入面板 × AGUI 流式对话 × SSE 实时通知</text>
+
+  <!-- ===== Layer 1: 交互层 (teal) ===== -->
+  <rect x="60" y="108" width="130" height="96" rx="10" fill="#0f9d8a" filter="url(#soft)"/>
+  <text x="125" y="150" text-anchor="middle" font-size="18" font-weight="700" fill="#ffffff">交互层</text>
+  <text x="125" y="172" text-anchor="middle" font-size="11" fill="#dcf5f1">Frontend UI</text>
+
+  <g filter="url(#soft)">
+    <rect x="220" y="108" width="176" height="96" rx="10" fill="#e2f6f2" stroke="#0f9d8a" stroke-width="1.5"/>
+    <text x="308" y="146" text-anchor="middle" font-size="15" font-weight="600" fill="#0a6b5e">Playground 入口</text>
+    <text x="308" y="170" text-anchor="middle" font-size="11.5" fill="#5b8f87">PlaygroundView.vue</text>
+    <text x="308" y="188" text-anchor="middle" font-size="11.5" fill="#5b8f87">feature 注册切换</text>
+
+    <rect x="412" y="108" width="176" height="96" rx="10" fill="#e2f6f2" stroke="#0f9d8a" stroke-width="1.5"/>
+    <text x="500" y="146" text-anchor="middle" font-size="15" font-weight="600" fill="#0a6b5e">会议管理面板</text>
+    <text x="500" y="170" text-anchor="middle" font-size="11.5" fill="#5b8f87">MeetingAssistantPanel</text>
+    <text x="500" y="188" text-anchor="middle" font-size="11.5" fill="#5b8f87">顶栏 · 筛选 · 卡片 · 列表</text>
+
+    <rect x="604" y="108" width="176" height="96" rx="10" fill="#e2f6f2" stroke="#0f9d8a" stroke-width="1.5"/>
+    <text x="692" y="146" text-anchor="middle" font-size="15" font-weight="600" fill="#0a6b5e">预定对话框</text>
+    <text x="692" y="170" text-anchor="middle" font-size="11.5" fill="#5b8f87">t-dialog 表单</text>
+    <text x="692" y="188" text-anchor="middle" font-size="11.5" fill="#5b8f87">主题/时间/提醒配置</text>
+
+    <rect x="796" y="108" width="176" height="96" rx="10" fill="#e2f6f2" stroke="#0f9d8a" stroke-width="1.5"/>
+    <text x="884" y="146" text-anchor="middle" font-size="15" font-weight="600" fill="#0a6b5e">助手聊天浮层</text>
+    <text x="884" y="170" text-anchor="middle" font-size="11.5" fill="#5b8f87">FAB + chat-panel</text>
+    <text x="884" y="188" text-anchor="middle" font-size="11.5" fill="#5b8f87">流式气泡 · 提醒卡片</text>
+
+    <rect x="988" y="108" width="176" height="96" rx="10" fill="#e2f6f2" stroke="#0f9d8a" stroke-width="1.5"/>
+    <text x="1076" y="146" text-anchor="middle" font-size="15" font-weight="600" fill="#0a6b5e">Markdown 渲染</text>
+    <text x="1076" y="170" text-anchor="middle" font-size="11.5" fill="#5b8f87">表格 · 代码块 · 列表</text>
+    <text x="1076" y="188" text-anchor="middle" font-size="11.5" fill="#5b8f87">renderMarkdown</text>
+  </g>
+
+  <line x1="620" y1="210" x2="620" y2="236" stroke="#9aa4b2" stroke-width="2" marker-end="url(#arrow)"/>
+
+  <!-- ===== Layer 2: 接口层 (blue) ===== -->
+  <rect x="60" y="242" width="130" height="96" rx="10" fill="#3d7bd9" filter="url(#soft)"/>
+  <text x="125" y="284" text-anchor="middle" font-size="18" font-weight="700" fill="#ffffff">接口层</text>
+  <text x="125" y="306" text-anchor="middle" font-size="11" fill="#dce8fb">API Layer</text>
+
+  <g filter="url(#soft)">
+    <rect x="220" y="242" width="290" height="96" rx="10" fill="#e8f0fc" stroke="#3d7bd9" stroke-width="1.5"/>
+    <text x="365" y="278" text-anchor="middle" font-size="15" font-weight="600" fill="#2456a8">会议 REST（axios）</text>
+    <text x="365" y="302" text-anchor="middle" font-size="11.5" fill="#6b87b3">/api/meeting/rooms · reservations</text>
+    <text x="365" y="320" text-anchor="middle" font-size="11.5" fill="#6b87b3">查询 / 创建 / 取消</text>
+
+    <rect x="540" y="242" width="290" height="96" rx="10" fill="#e8f0fc" stroke="#3d7bd9" stroke-width="1.5"/>
+    <text x="685" y="278" text-anchor="middle" font-size="15" font-weight="600" fill="#2456a8">AGUI 流式对话（fetch SSE）</text>
+    <text x="685" y="302" text-anchor="middle" font-size="11.5" fill="#6b87b3">POST /api/chat · protocol=agui</text>
+    <text x="685" y="320" text-anchor="middle" font-size="11.5" fill="#6b87b3">streamAgentMessage 按行解析</text>
+
+    <rect x="860" y="242" width="290" height="96" rx="10" fill="#e8f0fc" stroke="#3d7bd9" stroke-width="1.5"/>
+    <text x="1005" y="278" text-anchor="middle" font-size="15" font-weight="600" fill="#2456a8">通知通道（EventSource）</text>
+    <text x="1005" y="302" text-anchor="middle" font-size="11.5" fill="#6b87b3">/api/notifications/*/stream</text>
+    <text x="1005" y="320" text-anchor="middle" font-size="11.5" fill="#6b87b3">connected · new_notification</text>
+  </g>
+
+  <line x1="620" y1="344" x2="620" y2="370" stroke="#9aa4b2" stroke-width="2" marker-end="url(#arrow)"/>
+
+  <!-- ===== Layer 3: 集成层 (purple) ===== -->
+  <rect x="60" y="376" width="130" height="96" rx="10" fill="#7048e8" filter="url(#soft)"/>
+  <text x="125" y="418" text-anchor="middle" font-size="18" font-weight="700" fill="#ffffff">集成层</text>
+  <text x="125" y="440" text-anchor="middle" font-size="11" fill="#ece5fd">Gateway</text>
+
+  <g filter="url(#soft)">
+    <rect x="220" y="376" width="450" height="96" rx="10" fill="#f0ebfd" stroke="#7048e8" stroke-width="1.5"/>
+    <text x="445" y="412" text-anchor="middle" font-size="15" font-weight="600" fill="#4b2bab">Vite Dev Proxy</text>
+    <text x="445" y="436" text-anchor="middle" font-size="11.5" fill="#8474b8">/api/chat · /api/playground · /api/meeting · /api/notifications</text>
+    <text x="445" y="454" text-anchor="middle" font-size="11.5" fill="#8474b8">统一转发 changeOrigin: true</text>
+
+    <rect x="700" y="376" width="450" height="96" rx="10" fill="#f0ebfd" stroke="#7048e8" stroke-width="1.5"/>
+    <text x="925" y="412" text-anchor="middle" font-size="15" font-weight="600" fill="#4b2bab">环境配置（.env）</text>
+    <text x="925" y="436" text-anchor="middle" font-size="11.5" fill="#8474b8">API_HOST / API_PORT = 48081</text>
+    <text x="925" y="454" text-anchor="middle" font-size="11.5" fill="#8474b8">生产：后端静态托管 dist</text>
+  </g>
+
+  <line x1="620" y1="478" x2="620" y2="504" stroke="#9aa4b2" stroke-width="2" marker-end="url(#arrow)"/>
+
+  <!-- ===== Layer 4: 服务层 (green) ===== -->
+  <rect x="60" y="510" width="130" height="96" rx="10" fill="#2f9e44" filter="url(#soft)"/>
+  <text x="125" y="552" text-anchor="middle" font-size="18" font-weight="700" fill="#ffffff">服务层</text>
+  <text x="125" y="574" text-anchor="middle" font-size="11" fill="#e1f5e4">Backend</text>
+
+  <g filter="url(#soft)">
+    <rect x="220" y="510" width="290" height="96" rx="10" fill="#e7f6ea" stroke="#2f9e44" stroke-width="1.5"/>
+    <text x="365" y="546" text-anchor="middle" font-size="15" font-weight="600" fill="#1d6b2d">egis-training-agent</text>
+    <text x="365" y="570" text-anchor="middle" font-size="11.5" fill="#5f9a6b">FastAPI · 端口 48081</text>
+    <text x="365" y="588" text-anchor="middle" font-size="11.5" fill="#5f9a6b">会议域 REST + 通知 REST</text>
+
+    <rect x="540" y="510" width="290" height="96" rx="10" fill="#e7f6ea" stroke="#2f9e44" stroke-width="1.5"/>
+    <text x="685" y="546" text-anchor="middle" font-size="15" font-weight="600" fill="#1d6b2d">meeting_agent</text>
+    <text x="685" y="570" text-anchor="middle" font-size="11.5" fill="#5f9a6b">AGUI 事件流 · run_mode=flash</text>
+    <text x="685" y="588" text-anchor="middle" font-size="11.5" fill="#5f9a6b">查房 / 订房 / 取消工具编排</text>
+
+    <rect x="860" y="510" width="290" height="96" rx="10" fill="#e7f6ea" stroke="#2f9e44" stroke-width="1.5"/>
+    <text x="1005" y="546" text-anchor="middle" font-size="15" font-weight="600" fill="#1d6b2d">提醒调度 + 通知服务</text>
+    <text x="1005" y="570" text-anchor="middle" font-size="11.5" fill="#5f9a6b">提前 5/15/30 分钟触发</text>
+    <text x="1005" y="588" text-anchor="middle" font-size="11.5" fill="#5f9a6b">SSE 广播 · 已读回执</text>
+  </g>
+
+  <line x1="620" y1="612" x2="620" y2="638" stroke="#9aa4b2" stroke-width="2" marker-end="url(#arrow)"/>
+
+  <!-- ===== Layer 5: 数据层 (orange) ===== -->
+  <rect x="60" y="644" width="130" height="90" rx="10" fill="#e8833a" filter="url(#soft)"/>
+  <text x="125" y="683" text-anchor="middle" font-size="18" font-weight="700" fill="#ffffff">数据层</text>
+  <text x="125" y="705" text-anchor="middle" font-size="11" fill="#fdeeda">Data</text>
+
+  <g filter="url(#soft)">
+    <rect x="220" y="644" width="290" height="90" rx="10" fill="#fdf1e6" stroke="#e8833a" stroke-width="1.5"/>
+    <text x="365" y="679" text-anchor="middle" font-size="15" font-weight="600" fill="#a85a1e">meeting_data.json</text>
+    <text x="365" y="703" text-anchor="middle" font-size="11.5" fill="#bb8a58">rooms · reservations</text>
+
+    <rect x="540" y="644" width="290" height="90" rx="10" fill="#fdf1e6" stroke="#e8833a" stroke-width="1.5"/>
+    <text x="685" y="679" text-anchor="middle" font-size="15" font-weight="600" fill="#a85a1e">会话状态</text>
+    <text x="685" y="703" text-anchor="middle" font-size="11.5" fill="#bb8a58">session_id · chatMessages（内存态）</text>
+
+    <rect x="860" y="644" width="290" height="90" rx="10" fill="#fdf1e6" stroke="#e8833a" stroke-width="1.5"/>
+    <text x="1005" y="679" text-anchor="middle" font-size="15" font-weight="600" fill="#a85a1e">通知队列</text>
+    <text x="1005" y="703" text-anchor="middle" font-size="11.5" fill="#bb8a58">notification_id 去重 · 已读状态</text>
+  </g>
+
+  <!-- side annotations -->
+  <g>
+    <rect x="60" y="770" width="1104" height="76" rx="10" fill="#f6f8fc" stroke="#c9d3e3" stroke-width="1.2"/>
+    <text x="84" y="798" font-size="13" font-weight="700" fill="#1f3a63">关键机制</text>
+    <text x="84" y="822" font-size="12" fill="#5c6b84">① 对话结束 finally 刷新数据，Agent 操作与页面状态一致　② onUnmounted 关闭 EventSource，面板切换无连接泄漏　③ 提醒展示前复查预定，已取消静默标记已读</text>
+  </g>
+
+  <text x="620" y="878" text-anchor="middle" font-size="12" fill="#a3abba">egis-agent-frontend · MeetingAssistant 技术设计 | 前端 Vue3 + TDesign · 后端 egis-training-agent (48081)</text>
+</svg>

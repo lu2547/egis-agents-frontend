@@ -69,6 +69,21 @@ export const handleSseEvent = (data: any, assistant: ChatMessage, startTime: num
     return;
   }
 
+  /* ── Research Loop 过程摘要（规划/取证/评估/汇总）── */
+  if (digestPayload?.display_type === 'research_trace') {
+    if (!assistant.researchTraces) assistant.researchTraces = [];
+    assistant.researchTraces.push({
+      id: assistant.researchTraces.length + 1,
+      toolName: digestPayload.tool_name || '',
+      turn: typeof digestPayload.turn === 'number' ? digestPayload.turn : 0,
+      phase: digestPayload.phase || '',
+      title: digestPayload.title || '研究进展',
+      content: digestPayload.content || ''
+    });
+    handlers.onScroll();
+    return;
+  }
+
   /* ── A2UI 卡片事件（必须在 text_message_content 之前）── */
   if (eventType === 'text_message_content' && data.content_kind === 'a2ui' && data.custom_data) {
     const docgenEditor = extractDocgenEditorFromA2UI(data.custom_data);
