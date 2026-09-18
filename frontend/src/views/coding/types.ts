@@ -1,7 +1,19 @@
 /** Coding Agent 前端模型 — 与 egis-opencode 后端契约一一对应。 */
 
-/** 模式：build（全量工具，写审批）/ plan（只读） */
-export type CodingMode = 'build' | 'plan';
+/** 模式标识：值由后端 agents/<agent>/agent.json 驱动（build / plan / wiki…）。 */
+export type CodingMode = string;
+
+/** GET /api/coding/agents 的 mode 条目（agent.json modes + available 实时状态）。 */
+export type AgentModeInfo = {
+    mode: CodingMode;
+    agent_id: string;
+    name: string;
+    description: string;
+    /** 只读模式（如 plan）：不落盘、无写审批 */
+    readonly?: boolean;
+    /** 该 agent 是否已在后端 registry 注册（false 时 chat 会拒绝） */
+    available?: boolean;
+};
 
 /** tool_digest.status — 工具执行状态 */
 export type ToolCardStatus = 'pending' | 'running' | 'success' | 'error' | 'denied';
@@ -131,11 +143,14 @@ export type ProjectStatus = {
     untracked_files: number;
 };
 
-/** 工作目录绑定（bind/binding 端点响应）*/
+/** 工作目录绑定（bind/binding/default 端点响应）*/
 export type WorkspaceBinding = {
     /** "" = 多租户模式；"local:<绝对路径>" = 本地目录锁定 */
     workspace_root: string;
     status: ProjectStatus | null;
+    /** 当前 root 是否服务端 .env 默认（非用户显式绑定）：
+     * 默认目录仅展示，chat 不携带 workspace_root，后端每轮解析 */
+    is_default?: boolean;
 };
 
 /** GET /api/coding/commands 条目（slash 命令） */

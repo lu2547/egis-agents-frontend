@@ -12,18 +12,20 @@
 import { nextTick, onUnmounted, reactive, ref } from 'vue';
 import {
     abortChat as apiAbortChat,
-    bindWorkspace as apiBindWorkspace,
     deleteSession as apiDeleteSession,
+    getAgents,
     getWorkspaceBinding,
+    getWorkspaceDefault,
     listCommands,
     listSessions,
     loadSessionMessages,
     pendingPermissions,
     respondPermission as apiRespondPermission
 } from './api';
-import { CODING_USER_ID, codingModeMap } from './constants';
+import { CODING_MODES, CODING_USER_ID } from './constants';
 import { appendTextPart, handleCustomEvent, upsertToolCard } from './sse';
 import type {
+    AgentModeInfo,
     CommandInfo,
     CodingMessage,
     CodingMode,
@@ -36,26 +38,10 @@ import type {
 const SESSIONS_REFRESH_INTERVAL_MS = 30_000;
 const PENDING_FALLBACK_INTERVAL_MS = 3_000;
 
-/* ── 最近绑定的本地目录（localStorage 持久化）────── */
-
-const RECENT_DIRS_KEY = 'egis-coding-recent-dirs';
-const RECENT_DIRS_MAX = 8;
-
-/** 加载最近绑定目录（最近优先；损坏/缺失时回退空列表）。 */
-const loadRecentDirs = (): string[] => {
-    try {
-        const raw = localStorage.getItem(RECENT_DIRS_KEY);
-        const parsed = raw ? JSON.parse(raw) : [];
-        return Array.isArray(parsed)
-            ? parsed.filter((item): item is string => typeof item === 'string')
-            : [];
-    } catch {
-        return [];
-    }
-};
-
 export const useCodingChat = () => {
     const mode = ref<CodingMode>('build');
+    /** 模式列表（GET /agents 动态拉取，agent.json 驱动；失败时保持 fallback） */
+    const modes = ref<AgentModeInfo[]>(CODING_MODES);
     const inputValue = ref('');
     const messages = ref<CodingMessage[]>([]);
     const isLoading = ref(false);
@@ -66,35 +52,32 @@ export const useCodingChat = () => {
     const backendError = ref('');
     const abortController = ref<AbortController | null>(null);
 
-    /* ── 工作目录（远程 clone / 本地目录）────── */
-    /** "" = 多租户（远程克隆项目都在其中）；"local:<绝对路径>" = 本地目录锁定 */
+    /* ── 工作目录（服务端反显；前端无目录配置能力）────── */
+    /** "" = 多租户沙箱；"local:<绝对路径>" = 锚定目录（后端解析结果）。
+     * 目录完全由服务端决定（.env CODING_DEFAULT_WORKSPACE_* 或会话
+     * 显式绑定），前端仅查询反显 —— chat 请求永不携带 workspace_root */
     const workspaceRoot = ref('');
-    /** 当前绑定目录的状态（名称/git 分支等） */
+    /** 当前工作目录的状态（名称/git 分支等） */
     const workspaceStatus = ref<ProjectStatus | null>(null);
     /** 当前工作目录下的 slash 命令（/ 面板） */
     const commands = ref<CommandInfo[]>([]);
-    const workspaceError = ref('');
-    const binding = ref(false);
     /** 会话列表定时刷新（title 变化等） */
     let sessionsTimer: ReturnType<typeof setInterval> | null = null;
-    /** 断线兜底轮询句柄（仅 run 进行中启动） */
+    /** 断线兑底轮询句柄（仅 run 进行中启动） */
     let pendingTimer: ReturnType<typeof setInterval> | null = null;
     let messageSeed = 1;
-    /** 成功绑定过的本地目录（最近优先；供侧栏一键绑定/切换） */
-    const recentDirs = ref<string[]>(loadRecentDirs());
 
-    const rememberDir = (dir: string) => {
-        const next = [dir, ...recentDirs.value.filter((item) => item !== dir)]
-            .slice(0, RECENT_DIRS_MAX);
-        recentDirs.value = next;
-        try {
-            localStorage.setItem(RECENT_DIRS_KEY, JSON.stringify(next));
-        } catch {
-            /* 隐私模式等写入失败：仅本次会话内生效 */
-        }
-    };
+    /** 当前模式元数据（chat agent_id / 命令面板 / placeholder 共用）。 */
+    const currentMode = (): AgentModeInfo =>
+        modes.value.find((item) => item.mode === mode.value) || {
+            mode: mode.value,
+            agent_id: mode.value,
+            name: mode.value,
+            description: ''
+        };
 
-    const currentMode = () => codingModeMap[mode.value];
+    /* ── 文件变动信号（写盘工具成功即 ++；文件树实时刷新的驱动源）── */
+    const fileMutationCount = ref(0);
 
     /* ── 滚动跟随 ───────────────────────────── */
 
@@ -159,8 +142,9 @@ export const useCodingChat = () => {
         if (isLoading.value) return;
         sessionId.value = '';
         messages.value = [];
-        // 保留当前目录绑定：同目录多会话是常态（对齐 opencode ——
-        // 新 session 继承当前 project directory，想换目录先解绑）
+        // 新会话无绑定：反显服务端默认工作目录（会话切回时再按
+        // 会话已存绑定刷新）
+        refreshDefaultWorkspace();
     };
 
     const selectSession = async (targetId: string) => {
@@ -201,77 +185,54 @@ export const useCodingChat = () => {
     /** 历史消息 → 可回放 UI 消息（tool_results 合并进前一条 assistant 的工具卡）。 */
     const renderHistory = (history: HistoryEntry[]): CodingMessage[] => renderHistoryRaw(history);
 
-    /* ── 工作目录绑定 ───────────────────── */
+    /* ── 工作目录反显（服务端决定，前端只查询展示）────── */
 
     const refreshCommands = async () => {
         try {
-            commands.value = await listCommands(CODING_USER_ID, workspaceRoot.value);
+            commands.value = await listCommands(
+                CODING_USER_ID,
+                workspaceRoot.value,
+                currentMode().agent_id
+            );
         } catch {
             commands.value = [];
         }
     };
 
-    /** 应用绑定结果（本地状态 + 命令面板）。 */
+    /** 拉取 agent 模式列表（后端 agent.json 聚合；新 agent 无需前端改动）。 */
+    const refreshModes = async () => {
+        try {
+            const result = await getAgents();
+            if (result.modes.length) modes.value = result.modes;
+        } catch {
+            /* 拉取失败保持 fallback（后端不可达时侧栏已有 backendError） */
+        }
+    };
+
+    /** 应用反显结果（本地状态 + 命令面板）。 */
     const applyBinding = async (root: string, status: ProjectStatus | null) => {
         workspaceRoot.value = root;
         workspaceStatus.value = status;
         await refreshCommands();
     };
 
-    /** 绑定本地目录（服务端校验存在性；有会话时同步持久化）。
-     *
-     * opts.silent：页面刷新后的自动恢复用 —— 目录已不存在等失败
-     * 静默回落多租户，不用错误提示打扰用户。
-     */
-    const bindLocalDir = async (
-        dir: string,
-        opts: { silent?: boolean } = {}
-    ) => {
-        const path = dir.trim();
-        if (!path || binding.value) return false;
-        binding.value = true;
-        workspaceError.value = '';
+    /** 反显服务端默认工作目录（新会话/无会话时的展示值）。 */
+    const refreshDefaultWorkspace = async () => {
         try {
-            const result = await apiBindWorkspace(
-                CODING_USER_ID,
-                `local:${path}`,
-                sessionId.value || undefined
-            );
-            // 恢复期间用户可能已选中旧会话（其服务端绑定优先，避免覆盖）
-            if (opts.silent && sessionId.value) return true;
+            const result = await getWorkspaceDefault();
             await applyBinding(result.workspace_root, result.status);
-            rememberDir(path);
-            return true;
-        } catch (err: any) {
-            if (!opts.silent) {
-                workspaceError.value = err?.message || '绑定失败';
-            }
-            return false;
-        } finally {
-            binding.value = false;
-        }
-    };
-
-    /** 解绑（回落多租户模式）。 */
-    const unbindWorkspace = async () => {
-        workspaceError.value = '';
-        try {
-            if (sessionId.value) {
-                await apiBindWorkspace(CODING_USER_ID, '', sessionId.value);
-            }
         } catch {
-            /* 解绑失败不阻塞：下次 chat 请求会携带空串 */
+            /* 查询失败保持当前展示（后端不可达时侧栏已有 backendError） */
         }
-        await applyBinding('', null);
     };
 
-    /** 切换会话时同步服务端已存的绑定。 */
+    /** 切换会话时反显服务端已存的绑定（显式绑定 > .env 默认）。 */
     const syncBindingFromSession = async (targetId: string) => {
         try {
             const result = await getWorkspaceBinding(targetId);
             await applyBinding(result.workspace_root, result.status);
         } catch {
-            await applyBinding('', null);
+            /* 查询失败保持当前展示（目录解析仍由后端在 chat 时兜底） */
         }
     };
 
@@ -375,14 +336,14 @@ export const useCodingChat = () => {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({
-                    agent_id: currentMode().agentId,
+                    agent_id: currentMode().agent_id,
                     message: query,
                     session_id: sessionId.value || undefined,
                     stream: true,
                     protocol: 'agui',
-                    user_id: CODING_USER_ID,
-                    // 工作目录随请求同步：空串=多租户，local:*=本地锁定
-                    workspace_root: workspaceRoot.value
+                    user_id: CODING_USER_ID
+                    // 不携带 workspace_root：目录完全由服务端解析
+                    // （会话显式绑定 > .env 默认 CODING_DEFAULT_WORKSPACE_*）
                 }),
                 signal: abortController.value.signal
             });
@@ -458,7 +419,9 @@ export const useCodingChat = () => {
                 handleCustomEvent(data.custom_type, data.custom_data, {
                     message: assistant,
                     onSessionId: hooks.onSessionId,
-                    onTitleGenerated: hooks.onTitleGenerated
+                    onTitleGenerated: hooks.onTitleGenerated,
+                    // run 中 write/edit/bash 落盘：文件系统已变动信号
+                    onFileMutated: () => { fileMutationCount.value++; }
                 });
                 scrollToBottom();
                 break;
@@ -552,14 +515,10 @@ export const useCodingChat = () => {
 
     startSessionPolling();
     refreshSessions();
-    refreshCommands();
-    // 页面刷新后自动恢复最近一次绑定（用户已显式授权过的目录；
-    // 目录已不存在时静默回落多租户起步）
-    if (!recentDirs.value.length) {
-        // 无历史绑定：多租户起步，无需恢复
-    } else {
-        bindLocalDir(recentDirs.value[0], { silent: true });
-    }
+    refreshModes();
+    // 目录由服务端决定：启动即反显 .env 默认工作目录（无默认时空串
+    // = 多租户沙箱）；选中会话时再按会话已存绑定刷新反显
+    refreshDefaultWorkspace();
     onUnmounted(() => {
         if (sessionsTimer) clearInterval(sessionsTimer);
         stopPendingPolling();
@@ -567,6 +526,8 @@ export const useCodingChat = () => {
 
     return {
         mode,
+        modes,
+        currentMode,
         inputValue,
         messages,
         isLoading,
@@ -579,10 +540,8 @@ export const useCodingChat = () => {
         backendError,
         workspaceRoot,
         workspaceStatus,
-        workspaceError,
-        binding,
         commands,
-        recentDirs,
+        fileMutationCount,
         newSession,
         selectSession,
         removeSession,
@@ -590,8 +549,6 @@ export const useCodingChat = () => {
         sendMessage,
         stop,
         switchMode,
-        bindLocalDir,
-        unbindWorkspace,
         refreshSessions
     };
 };

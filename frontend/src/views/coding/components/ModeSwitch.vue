@@ -1,8 +1,11 @@
 <script setup lang="ts">
-import { CODING_MODES, codingModeMap } from '../constants';
-import type { CodingMode } from '../types';
+import type { AgentModeInfo, CodingMode } from '../types';
 
-defineProps<{ modelValue: CodingMode }>();
+defineProps<{
+    /** 模式列表（useCodingChat 的 GET /agents 动态数据；fallback 常量兑底） */
+    modelValue: CodingMode;
+    modes: AgentModeInfo[];
+}>();
 const emit = defineEmits<{ (e: 'update:modelValue', mode: CodingMode): void }>();
 
 const select = (mode: CodingMode) => emit('update:modelValue', mode);
@@ -11,12 +14,12 @@ const select = (mode: CodingMode) => emit('update:modelValue', mode);
 <template>
   <div class="mode-switch" role="tablist" aria-label="模式切换">
     <button
-      v-for="item in CODING_MODES"
+      v-for="item in modes"
       :key="item.mode"
       type="button"
       role="tab"
-      :class="['mode-option', { active: modelValue === item.mode, readonly: item.mode === 'plan' }]"
-      :title="codingModeMap[item.mode].description"
+      :class="['mode-option', { active: modelValue === item.mode, readonly: item.readonly }]"
+      :title="item.description"
       :aria-selected="modelValue === item.mode"
       @click="select(item.mode)"
     >
@@ -55,5 +58,11 @@ const select = (mode: CodingMode) => emit('update:modelValue', mode);
   color: #ffffff;
   background: linear-gradient(135deg, #2f62f6 0%, #2348c7 100%);
   box-shadow: 0 4px 10px rgba(47, 98, 246, 0.24);
+}
+
+/* 只读模式（如 plan）选中态：绿色系与写审批模式区分 */
+.mode-option.readonly.active {
+  background: linear-gradient(135deg, #12b76a 0%, #039855 100%);
+  box-shadow: 0 4px 10px rgba(18, 183, 106, 0.24);
 }
 </style>

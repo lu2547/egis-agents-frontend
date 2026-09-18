@@ -1,13 +1,13 @@
 /** egis-opencode REST 封装（/api/coding 前缀，经 vite proxy → :38083）。 */
 
 import type {
+    AgentModeInfo,
     CommandInfo,
     FileContentResponse,
     FileTreeResponse,
     HistoryMessage,
     PermissionAction,
     PermissionRequest,
-    ProjectStatus,
     SessionMeta,
     WorkspaceBinding
 } from './types';
@@ -70,43 +70,26 @@ export const abortChat = (sessionId: string) =>
         body: JSON.stringify({ session_id: sessionId })
     });
 
-/** 用户 workspace 项目列表（含 git 状态）。 */
-export const listProjects = (userId: string) =>
-    request<ProjectStatus[]>(`/workspaces?user_id=${encodeURIComponent(userId)}`);
-
-/** 克隆远程仓库到用户 workspace。 */
-export const cloneProject = (userId: string, repoUrl: string, branch?: string) =>
-    request<ProjectStatus>('/workspaces/clone', {
-        method: 'POST',
-        body: JSON.stringify({ user_id: userId, repo_url: repoUrl, branch })
-    });
-
-/** 校验并绑定/解绑会话工作目录（local:<绝对路径>；空串解绑）。 */
-export const bindWorkspace = (
-    userId: string,
-    workspaceRoot: string,
-    sessionId?: string
-) =>
-    request<WorkspaceBinding>('/workspaces/bind', {
-        method: 'POST',
-        body: JSON.stringify({
-            user_id: userId,
-            session_id: sessionId || undefined,
-            workspace_root: workspaceRoot
-        })
-    });
-
-/** 会话当前的工作目录绑定（空串 = 多租户模式）。 */
+/** 会话当前的工作目录绑定（显式绑定 > .env 默认 > 空串多租户）。 */
 export const getWorkspaceBinding = (sessionId: string) =>
     request<WorkspaceBinding>(
         `/workspaces/binding?session_id=${encodeURIComponent(sessionId)}`
     );
 
-/** slash 命令列表（工作目录下的 .opencode/commands / .claude/commands）。 */
-export const listCommands = (userId: string, workspaceRoot = '') =>
+/** 服务端默认工作目录（.env CODING_DEFAULT_WORKSPACE_*；空串=未配置）。 */
+export const getWorkspaceDefault = () =>
+    request<WorkspaceBinding>('/workspaces/default');
+
+/** agent 模式列表（agents/<agent>/agent.json 聚合，后端多 agent 注册即扩充）。 */
+export const getAgents = () =>
+    request<{ modes: AgentModeInfo[] }>('/agents');
+
+/** slash 命令列表（agent 内置 commands + 工作目录 .opencode/commands）。 */
+export const listCommands = (userId: string, workspaceRoot = '', agentId = '') =>
     request<CommandInfo[]>(
         `/commands?user_id=${encodeURIComponent(userId)}` +
-        (workspaceRoot ? `&workspace_root=${encodeURIComponent(workspaceRoot)}` : '')
+        (workspaceRoot ? `&workspace_root=${encodeURIComponent(workspaceRoot)}` : '') +
+        (agentId ? `&agent_id=${encodeURIComponent(agentId)}` : '')
     );
 
 /** 工作目录文件树（限深；目录 children=null 懒加载）。 */

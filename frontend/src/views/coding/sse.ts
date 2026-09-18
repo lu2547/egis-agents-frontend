@@ -17,7 +17,12 @@ export type CustomEventContext = {
     onSessionId?: (sessionId: string) => void;
     /** title_generated：本地 patch 会话标题 */
     onTitleGenerated?: (sessionId: string, title: string) => void;
+    /** 写盘类工具成功落定（文件树实时刷新的信号源） */
+    onFileMutated?: (toolName: string) => void;
 };
+
+/** 会改动文件系统的工具（其余 read/grep/glob/list 只读免刷）。 */
+const FILE_MUTATING_TOOLS = new Set(['write', 'edit', 'bash']);
 
 /**
  * 正文增量：content 镜像追加 + parts 尾部 text part 续写
@@ -102,9 +107,16 @@ export const handleCustomEvent = (
             break;
         }
         case 'tool_digest': {
+            const status = (customData.status as ToolCard['status']) || undefined;
+            const toolName = customData.tool_name ? String(customData.tool_name) : undefined;
+            // 写盘类工具成功：文件系统已变动，通知宿主刷新文件树
+            // （run 进行中的实时信号；run 结束另有一轮兜底刷新）
+            if (status === 'success' && toolName && FILE_MUTATING_TOOLS.has(toolName)) {
+                ctx.onFileMutated?.(toolName);
+            }
             upsertToolCard(message, {
                 tool_call_id: String(customData.tool_call_id || ''),
-                tool_name: customData.tool_name ? String(customData.tool_name) : undefined,
+                tool_name: toolName || undefined,
                 display_type: customData.display_type as ToolDisplayType | undefined,
                 status: (customData.status as ToolCard['status']) || undefined,
                 title: customData.title ? String(customData.title) : undefined,

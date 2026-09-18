@@ -130,7 +130,8 @@ const onOutlineConfirm = (updatedOutline: any) => {
               v-model="inputValue"
               rows="3"
               :placeholder="`输入问题，当前使用 ${selectedAgent.title}`"
-              @keydown.enter.exact.prevent="sendMessage"
+              @keydown.ctrl.enter.prevent="sendMessage"
+              @keydown.meta.enter.prevent="sendMessage"
             />
             <div class="composer-footer">
               <div class="composer-tools">
@@ -356,7 +357,8 @@ const onOutlineConfirm = (updatedOutline: any) => {
           v-model="inputValue"
           rows="2"
           :placeholder="`继续和 ${selectedAgent.title} 对话`"
-          @keydown.enter.exact.prevent="sendMessage"
+          @keydown.ctrl.enter.prevent="sendMessage"
+          @keydown.meta.enter.prevent="sendMessage"
         />
         <div class="composer-footer">
           <div class="composer-tools">

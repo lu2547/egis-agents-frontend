@@ -1,18 +1,18 @@
 <script setup lang="ts">
-import { computed, ref, watch } from 'vue';
+import { computed, onUnmounted, ref, watch } from 'vue';
 import {
   ArrowDownIcon,
   ArrowUpIcon,
   BrowseIcon,
   CloudIcon,
-  CloseIcon,
   FolderOpenIcon,
   LoadingIcon,
   StopCircleIcon,
   TerminalIcon
 } from 'tdesign-icons-vue-next';
 import { renderMarkdown } from '../chat/markdown';
-import { bindingDisplayPath, CODING_EXAMPLES, codingModeMap } from './constants';
+import { SEND_SHORTCUT_HINT } from '../../utils/platform';
+import { bindingDisplayPath, CODING_EXAMPLES } from './constants';
 import { useCodingChat } from './useCodingChat';
 import type { CommandInfo } from './types';
 import ModeSwitch from './components/ModeSwitch.vue';
@@ -25,6 +25,8 @@ import ToolCallCard from './components/ToolCallCard.vue';
 
 const {
   mode,
+  modes,
+  currentMode,
   inputValue,
   messages,
   isLoading,
@@ -37,22 +39,18 @@ const {
   backendError,
   workspaceRoot,
   workspaceStatus,
-  workspaceError,
-  binding,
   commands,
-  recentDirs,
+  fileMutationCount,
   newSession,
   selectSession,
   removeSession,
   respondToPermission,
   sendMessage,
   stop,
-  switchMode,
-  bindLocalDir,
-  unbindWorkspace
+  switchMode
 } = useCodingChat();
 
-const modeHint = computed(() => codingModeMap[mode.value].description);
+const modeHint = computed(() => currentMode().description);
 
 /* 未落定的审批请求：固定展示在输入区上方（不再随消息流滚动） */
 const pendingRequests = computed(() =>
@@ -87,6 +85,22 @@ watch(isLoading, (now, prev) => {
   if (prev && !now) explorerRefreshToken.value++;
 });
 
+/* run 进行中的实时同步：write/edit/bash 每次落盘即 bump 文件变动信号，
+ * debounce 合并成一次树刷新（连续工具调用不逐个刷，避免闪烁/请求风暴）；
+ * 面板未开不刷 —— 重新打开时 onMounted 拉的就是最新目录 */
+let fileRefreshTimer: ReturnType<typeof setTimeout> | null = null;
+watch(fileMutationCount, () => {
+  if (!showExplorer.value) return;
+  if (fileRefreshTimer) clearTimeout(fileRefreshTimer);
+  fileRefreshTimer = setTimeout(() => {
+    explorerRefreshToken.value++;
+    fileRefreshTimer = null;
+  }, 800);
+});
+onUnmounted(() => {
+  if (fileRefreshTimer) clearTimeout(fileRefreshTimer);
+});
+
 /* ── 右侧栏宽度拖拽 ─────────────────── */
 
 const RAIL_MIN_WIDTH = 300;
@@ -115,9 +129,9 @@ const startRailResize = (event: MouseEvent) => {
 };
 
 const workspaceTitle = computed(() => {
-  if (!workspaceRoot.value) return '远程克隆的项目都在隔离的沙箱工作区（多租户）';
+  if (!workspaceRoot.value) return '沙箱工作区（多租户）—— 由服务端 .env 配置决定';
   const status = workspaceStatus.value;
-  const lines = [`本地目录：${bindingDisplayPath(workspaceRoot.value)}`];
+  const lines = [`工作目录：${bindingDisplayPath(workspaceRoot.value)}（服务端配置）`];
   if (status?.is_git_repo) {
     lines.push(
       `${status.branch || '—'} @ ${status.head_short || '—'} · ${status.dirty_files} 改动 / ${status.untracked_files} 未跟踪`
@@ -151,22 +165,14 @@ const applyCommand = (cmd: CommandInfo) => {
       :sessions="sessions"
       :active-session-id="sessionId"
       :backend-error="backendError"
-      :workspace-root="workspaceRoot"
-      :workspace-status="workspaceStatus"
-      :workspace-error="workspaceError"
-      :binding="binding"
-      :recent-dirs="recentDirs"
       @select="selectSession"
       @new="newSession"
       @delete="removeSession"
-      @bind="bindLocalDir"
-      @unbind="unbindWorkspace"
     />
 
     <main class="coding-main">
       <header class="coding-topbar">
-        <ModeSwitch :model-value="mode" @update:model-value="switchMode" />
-        <span class="mode-hint">{{ modeHint }}</span>
+        <ModeSwitch :model-value="mode" :modes="modes" @update:model-value="switchMode" />
         <span v-if="pendingCount" class="pending-pill">{{ pendingCount }} 项待审批</span>
         <button
           type="button"
@@ -182,16 +188,6 @@ const applyCommand = (cmd: CommandInfo) => {
           <FolderOpenIcon v-if="workspaceRoot" />
           <CloudIcon v-else />
           <span class="workspace-pill-text">{{ workspaceLabel }}</span>
-          <button
-            v-if="workspaceRoot"
-            type="button"
-            class="workspace-unbind"
-            aria-label="解绑本地目录"
-            title="解绑，回到沙箱工作区"
-            @click="unbindWorkspace"
-          >
-            <CloseIcon />
-          </button>
         </span>
       </header>
 
@@ -301,21 +297,18 @@ const applyCommand = (cmd: CommandInfo) => {
             <span>{{ cmd.description }}</span>
           </button>
           <p v-if="!filteredCommands.length" class="command-empty">
-            {{
-              commands.length
-                ? '无匹配命令'
-                : '当前工作目录没有命令 —— 在左侧绑定本地目录（如 llm-wiki）后可用 /ingest、/query、/lint'
-            }}
+            {{ commands.length ? '无匹配命令' : '当前模式没有可用命令' }}
           </p>
         </div>
         <textarea
           v-model="inputValue"
           rows="3"
-          :placeholder="`输入指令，当前模式：${codingModeMap[mode].name}（${modeHint}）`"
-          @keydown.enter.exact.prevent="sendMessage"
+          :placeholder="`输入指令，当前模式：${currentMode().name}（${modeHint}）`"
+          @keydown.ctrl.enter.prevent="sendMessage"
+          @keydown.meta.enter.prevent="sendMessage"
         ></textarea>
         <div class="composer-footer">
-          <span class="composer-note">Enter 发送</span>
+          <span class="composer-note">{{ SEND_SHORTCUT_HINT }}</span>
           <button
             v-if="isLoading"
             type="button"
@@ -420,14 +413,6 @@ const applyCommand = (cmd: CommandInfo) => {
   flex: 0 0 auto;
 }
 
-.mode-hint {
-  overflow: hidden;
-  color: #8d95a4;
-  font-size: 12px;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-
 .pending-pill {
   padding: 3px 10px;
   border-radius: 999px;
@@ -502,26 +487,6 @@ const applyCommand = (cmd: CommandInfo) => {
   min-width: 0;
   text-overflow: ellipsis;
   white-space: nowrap;
-}
-
-.workspace-unbind {
-  border: 0;
-  padding: 2px;
-  display: inline-flex;
-  align-items: center;
-  color: inherit;
-  background: transparent;
-  cursor: pointer;
-  flex: 0 0 auto;
-}
-
-.workspace-unbind:hover {
-  color: #b42318;
-}
-
-.workspace-unbind svg {
-  width: 12px;
-  height: 12px;
 }
 
 /* ── 消息区 ───────────────────────────── */

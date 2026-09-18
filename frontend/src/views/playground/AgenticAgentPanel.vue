@@ -14,6 +14,7 @@ import {
 import { usePlaygroundChat } from './usePlaygroundChat';
 import ConfigPanel from './ConfigPanel.vue';
 import { renderMarkdown } from '../chat/markdown';
+import { SEND_SHORTCUT_HINT } from '../../utils/platform';
 import type { ChatMessage, ResearchTrace } from '../chat/types';
 import {
   activeStepId,
@@ -280,8 +281,9 @@ onMounted(loadFiles);
         <textarea
           v-model="inputValue"
           rows="2"
-          placeholder="输入消息，Enter 发送"
-          @keydown.enter.exact.prevent="send"
+          :placeholder="`输入消息，${SEND_SHORTCUT_HINT}`"
+          @keydown.ctrl.enter.prevent="send"
+          @keydown.meta.enter.prevent="send"
         />
         <div class="composer-footer">
           <div class="composer-left">
