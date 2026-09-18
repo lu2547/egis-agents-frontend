@@ -6,6 +6,7 @@ export default defineConfig(({ mode }) => {
   const apiHost = env.API_HOST && env.API_HOST !== '0.0.0.0' ? env.API_HOST : 'localhost';
   const apiPort = env.API_PORT || '38081';
   const knowledgePort = env.EK_API_PORT || '48082';
+  const codingPort = env.CODING_API_PORT || '38083';
 
   return {
     plugins: [vue()],
@@ -34,6 +35,10 @@ export default defineConfig(({ mode }) => {
         },
         '/api/knowledge': {
           target: `http://${apiHost}:${knowledgePort}`,
+          changeOrigin: true
+        },
+        '/api/coding': {
+          target: `http://${apiHost}:${codingPort}`,
           changeOrigin: true
         }
       }
