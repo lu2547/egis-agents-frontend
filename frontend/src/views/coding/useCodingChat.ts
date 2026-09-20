@@ -460,11 +460,11 @@ export const useCodingChat = () => {
                 if (typeof data.message === 'string' && data.message && !assistant.content) {
                     appendTextPart(assistant, data.message);
                 }
-                // 轮次预算耗尽：不再无声中断，明确告知可继续
+                // 运行上限截断：轮次预算或单次输出长度（ark 两者共用该 outcome）
                 if (data.outcome === 'stopped_by_limit') {
                     appendTextPart(
                         assistant,
-                        '\n\n---\n已达单次运行的轮次上限，任务被截断。发送“继续”可从中断处接着执行。'
+                        '\n\n---\n已达单次运行上限（轮次预算或单次输出长度），任务被截断。发送“继续”可从中断处接着执行；若反复被截断，建议让模型分块、分文件处理。'
                     );
                 }
                 assistant.elapsed = Math.max(1, Math.round((Date.now() - startTime) / 1000));
